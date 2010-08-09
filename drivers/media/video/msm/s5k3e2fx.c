@@ -1944,6 +1944,7 @@ static struct i2c_driver s5k3e2fx_i2c_driver = {
 	},
 };
 
+#if 0
 static int s5k3e2fx_test(enum msm_s_test_mode mo)
 {
 	int rc = 0;
@@ -1956,6 +1957,7 @@ static int s5k3e2fx_test(enum msm_s_test_mode mo)
 
 	return rc;
 }
+#endif
 
 static int s5k3e2fx_setting_INIT_EVT4(void)
 {
@@ -2614,8 +2616,10 @@ static int s5k3e2fx_sensor_open_init(struct msm_camera_sensor_info *data)
 	s5k3e2fx_ctrl->prev_res = S_QTR_SIZE;
 	s5k3e2fx_ctrl->pict_res = S_FULL_SIZE;
 
-	if (data)
-		s5k3e2fx_ctrl->sensordata = data;
+	if (data == NULL)
+		goto init_fail1;
+
+	s5k3e2fx_ctrl->sensordata = data;
 
 	/* enable mclk first */
 	msm_camio_clk_rate_set(S5K3E2FX_DEF_MCLK);
@@ -2625,7 +2629,7 @@ static int s5k3e2fx_sensor_open_init(struct msm_camera_sensor_info *data)
 	msm_camio_camif_pad_reg_reset();
 	msleep(20);
 
-	rc = s5k3e2fx_probe_init_sensor(data);
+	rc = s5k3e2fx_probe_init_sensor(s5k3e2fx_ctrl->sensordata);
 	if (rc < 0)
 		goto init_fail1;
 
@@ -2866,8 +2870,10 @@ static int s5k3e2fx_write_exp_gain(uint16_t gain, uint32_t line)
 
 	CDBG("Line:%d s5k3e2fx_write_exp_gain \n", __LINE__);
 //printk("Steven Enter write_exp_gain User Space Gain and Line:gain = %4d, line = %6d \n", gain, line);
+#if 0
 	if ((gain == 0) || (line == 0))  /* 100202 Add this for gain == line == 0 special condition */
 		return rc;
+#endif
 
 	if (s5k3e2fx_ctrl->sensormode == SENSOR_PREVIEW_MODE) {
 
@@ -3159,7 +3165,7 @@ static int s5k3e2fx_suspend(struct platform_device *pdev, pm_message_t state)
 	s5k3e2fx_event.waked_up = 0;
 
 
-	pr_info("s5k3e2fx: camera suspend\n");
+	pr_info("s5k3e2fx: camera suspend waked_up %d\n", s5k3e2fx_event.waked_up);
 	rc = gpio_request(sinfo->sensor_reset, "s5k3e2fx");
 	if (!rc)
 		gpio_direction_output(sinfo->sensor_reset, 0);
@@ -3255,6 +3261,7 @@ static void s5k3e2fx_sensor_resume_setting(void)
 static void s5k3e2fx_resume(struct early_suspend *handler)
 {
 	struct msm_camera_sensor_info *sinfo = s5k3e2fx_pdev->dev.platform_data;
+	struct msm_camera_device_platform_data *camdev = sinfo->pdata;
 
 	if (!sinfo->need_suspend)
 		return;
@@ -3267,13 +3274,20 @@ static void s5k3e2fx_resume(struct early_suspend *handler)
 
 	pr_info("s5k3e2fx_resume\n");
 	/*init msm,clk ,GPIO,enable */
-	msm_camio_probe_on(s5k3e2fx_pdev);
+	//msm_camio_probe_on(s5k3e2fx_pdev);
+	msm_camio_clk_enable(CAMIO_VFE_MDC_CLK);
 	msm_camio_clk_enable(CAMIO_MDC_CLK);
+	msm_camio_clk_enable(CAMIO_VFE_CLK);
+	pr_info("msm_camio_clk_enable\n");
 
-	pr_info("msm_camio_probe_on\n");
+	msm_camio_camif_pad_reg_reset();
+	pr_info("%s msm_camio_camif_pad_reg_reset\n", __func__);
+
 	/*read sensor ID and pull down reset */
 	msm_camio_clk_rate_set(S5K3E2FX_DEF_MCLK);
 	pr_info("msm_camio_clk_rate_set\n");
+	camdev->camera_gpio_on();
+	pr_info("camera_gpio_on\n");
 	msleep(20);
 	s5k3e2fx_probe_init_sensor(sinfo);
 	CDBG("s5k3e2fx_probe_init_sensor\n");
@@ -3298,11 +3312,16 @@ static void s5k3e2fx_resume(struct early_suspend *handler)
 	s5k3e2fx_i2c_write_b(s5k3e2fx_client->addr, 0x3150, 0x51);
 	msleep(240);
 	/*set RST to low */
-	msm_camio_probe_off(s5k3e2fx_pdev);
+	//msm_camio_probe_off(s5k3e2fx_pdev);
+	msm_camio_clk_disable(CAMIO_VFE_CLK);
+	msm_camio_clk_disable(CAMIO_VFE_MDC_CLK);
 	msm_camio_clk_disable(CAMIO_MDC_CLK);
+	pr_info("msm_camio_clk_disable\n");
+	camdev->camera_gpio_off();
+	pr_info("camera_gpio_off\n");
 	s5k3e2fx_event.waked_up = 1;
 	wake_up(&s5k3e2fx_event.event_wait);
-	pr_info("s5k3e2fx:resume done\n");
+	pr_info("s5k3e2fx:resume done, waked_up %d\n", s5k3e2fx_event.waked_up);
 	return;
 }
 
@@ -3503,6 +3522,8 @@ static int s5k3e2fx_sensor_probe(struct msm_camera_sensor_info *info,
 	init_waitqueue_head(&s5k3e2fx_event.event_wait);
 	/*init waked_up value*/
 	s5k3e2fx_event.waked_up = 1;
+	info->waked_up = &s5k3e2fx_event.waked_up;
+	info->event_wait = &s5k3e2fx_event.event_wait;
 	/*write sysfs*/
 	s5k3e2fx_sysfs_init();
 

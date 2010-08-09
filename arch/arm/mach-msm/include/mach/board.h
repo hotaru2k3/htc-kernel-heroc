@@ -82,7 +82,7 @@ struct msm_camera_sensor_info {
 	struct resource *resource;
 	uint8_t num_resources;
 	uint32_t waked_up;
-	wait_queue_head_t event_wait;
+	wait_queue_head_t* event_wait;
 	uint32_t kpi_sensor_start;
 	uint32_t kpi_sensor_end;
 	int flash_type; /* for back support */
