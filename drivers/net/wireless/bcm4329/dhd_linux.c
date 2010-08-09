@@ -3,13 +3,13 @@
  * Basically selected code segments from usb-cdc.c and usb-rndis.c
  *
  * Copyright (C) 1999-2010, Broadcom Corporation
- * 
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -17,7 +17,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -62,7 +62,7 @@
 #include <linux/wakelock.h>
 #endif
 #if defined(CUSTOMER_HW2) && defined(CONFIG_WIFI_CONTROL_FUNC)
-#include <linux/wlan_plat.h>
+#include <linux/wifi_tiwlan.h>
 
 struct semaphore wifi_control_sem;
 
@@ -120,9 +120,11 @@ int wifi_get_mac_addr(unsigned char *buf)
 	printk("%s\n", __FUNCTION__);
 	if (!buf)
 		return -EINVAL;
+  /*
 	if (wifi_control_data && wifi_control_data->get_mac_addr) {
 		return wifi_control_data->get_mac_addr(buf);
 	}
+  */
 	return -EOPNOTSUPP;
 }
 
@@ -2305,7 +2307,7 @@ dhd_net_attach(dhd_pub_t *dhdp, int ifidx)
 	       dhd->pub.mac.octet[0], dhd->pub.mac.octet[1], dhd->pub.mac.octet[2],
 	       dhd->pub.mac.octet[3], dhd->pub.mac.octet[4], dhd->pub.mac.octet[5]);
 
-#if defined(CONFIG_WIRELESS_EXT) && !defined(CSCAN)
+#if defined(CONFIG_WIRELESS_EXT)
 #ifdef SOFTAP
 	if (ifidx == 0)
 		/* Don't call for SOFTAP Interface in SOFTAP MODE */
@@ -2485,7 +2487,7 @@ dhd_module_init(void)
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 	sema_init(&dhd_registration_sem, 0);
-#endif 
+#endif
 
 	error = dhd_bus_register();
 

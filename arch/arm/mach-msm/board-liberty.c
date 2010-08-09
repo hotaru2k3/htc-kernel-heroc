@@ -69,7 +69,6 @@
 #include <mach/msm_serial_debugger.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_hsusb.h>
-#include <mach/bcm_bt_lpm.h>
 
 #include "devices.h"
 #include "board-liberty.h"
@@ -759,28 +758,6 @@ static struct platform_device liberty_timed_gpios = {
 	},
 };
 
-#ifdef CONFIG_SERIAL_MSM_HS
-static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
-        .rx_wakeup_irq = -1,
-        .inject_rx_on_wakeup = 0,
-        .exit_lpm_cb = bcm_bt_lpm_exit_lpm_locked,
-};
-
-static struct bcm_bt_lpm_platform_data bcm_bt_lpm_pdata = {
-        .gpio_wake = LIBERTY_GPIO_BT_CHIP_WAKE,
-        .gpio_host_wake = LIBERTY_GPIO_BT_HOST_WAKE,
-        .request_clock_off_locked = msm_hs_request_clock_off_locked,
-        .request_clock_on_locked = msm_hs_request_clock_on_locked,
-};
-
-struct platform_device bcm_bt_lpm_device = {
-        .name = "bcm_bt_lpm",
-        .id = 0,
-        .dev = {
-                .platform_data = &bcm_bt_lpm_pdata,
-        },
-};
-#endif
 
 static struct platform_device *devices[] __initdata = {
 	&msm_device_i2c,
@@ -795,7 +772,6 @@ static struct platform_device *devices[] __initdata = {
 	&liberty_oj,
 	&capella_cm3602,
 	&liberty_timed_gpios,
-	&bcm_bt_lpm_device,
 };
 
 extern struct sys_timer msm_timer;
@@ -967,6 +943,20 @@ static struct perflock_platform_data liberty_perflock_data = {
 	.table_size = ARRAY_SIZE(liberty_perf_acpu_table),
 };
 
+#ifdef CONFIG_SERIAL_MSM_HS
+static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
+	.wakeup_irq = MSM_GPIO_TO_INT(LIBERTY_GPIO_BT_HOST_WAKE),
+	.inject_rx_on_wakeup = 0,
+	.cpu_lock_supported = 1,
+
+	/* for bcm */
+	.bt_wakeup_pin_supported = 1,
+	.bt_wakeup_pin = LIBERTY_GPIO_BT_CHIP_WAKE,
+	.host_wakeup_pin = LIBERTY_GPIO_BT_HOST_WAKE,
+
+};
+#endif
+
 /*Farmer:For H2W power*/
 static struct vreg *vreg_h2w;
 static int h2w_power_configure(struct gpio_chip *chip,
@@ -1112,7 +1102,7 @@ static void __init liberty_init(void)
 
 #ifdef CONFIG_SERIAL_MSM_HS
 	msm_device_uart_dm1.dev.platform_data = &msm_uart_dm1_pdata;
-	msm_device_uart_dm1.name = "msm_serial_hs";	/* for bcm */
+	msm_device_uart_dm1.name = "msm_serial_hs_bcm";	/* for bcm */
 	msm_add_serial_devices(3);
 #else
 	msm_add_serial_devices(0);

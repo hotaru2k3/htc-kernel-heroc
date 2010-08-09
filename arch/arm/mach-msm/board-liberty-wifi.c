@@ -77,7 +77,7 @@ static struct resource liberty_wifi_resources[] = {
 		.name		= "bcm4329_wlan_irq",
 		.start		= MSM_GPIO_TO_INT(LIBERTY_GPIO_WIFI_IRQ1),
 		.end		= MSM_GPIO_TO_INT(LIBERTY_GPIO_WIFI_IRQ1),
-		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE,
+		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
 	},
 };
 
