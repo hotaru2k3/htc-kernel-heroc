@@ -28,6 +28,7 @@
 #include <linux/cpu.h>
 #include <linux/completion.h>
 #include <linux/mutex.h>
+#include <linux/debugfs.h>
 
 #define dprintk(msg...) cpufreq_debug_printk(CPUFREQ_DEBUG_CORE, \
 						"cpufreq-core", msg)
@@ -1929,10 +1930,7 @@ static int __init cpufreq_core_init(void)
 		init_rwsem(&per_cpu(cpu_policy_rwsem, cpu));
 	}
 
-        cpufreq_global_kobject = kobject_create_and_add("cpufreq",
-                                                &cpu_sysdev_class.kset.kobj);
-        BUG_ON(!cpufreq_global_kobject);
-
+	debugfs_create_u32("cpufreq_debug", 0600, NULL, &debug);
 	return 0;
 }
 
