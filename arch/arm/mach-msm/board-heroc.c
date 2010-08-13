@@ -164,7 +164,7 @@ static struct microp_pin_config microp_pins_0[] = {
 		.suspend_off = 1,
 	},
 	{
-		.name	= "vtkey-backlight",
+		.name	= "jogball-backlight",
 		.pin	= 8,
 		.config = MICROP_PIN_CONFIG_GPO,
 		.suspend_off = 1,
@@ -250,7 +250,7 @@ static struct microp_pin_config microp_pins_1[] = {
 		.suspend_off = 1,
 	},
 	{
-		.name	= "vtkey-backlight",
+		.name	= "jogball-backlight",
 		.pin	= 8,
 		.config = MICROP_PIN_CONFIG_GPO,
 		.suspend_off = 1,
