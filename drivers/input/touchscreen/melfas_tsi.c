@@ -57,11 +57,12 @@ struct melfas_ts_data {
 	struct mutex melfas_ts_mutex;
 	struct device dev;
 	int wake_up;
-	uint8_t priority;
+	uint8_t first_pressed;
 	uint8_t key_pressed;
 	uint16_t max_x;
 	uint16_t max_y;
 	uint8_t reported_finger_count;
+	int tp_en;
 #ifdef ENABLE_MELFAS_TOUCH_DEBUGFS
 	uint8_t debug_log_level;
 	int intr;
@@ -138,6 +139,123 @@ static int melfas_i2c_write_block(struct i2c_client *client, uint8_t addr,
 	}
 	return 0;
 }
+
+
+#define ENABLE_IME_IMPROVEMENT
+
+#ifdef ENABLE_IME_IMPROVEMENT
+#define MULTI_FINGER_NUMBER 2
+
+static int ime_threshold;
+static int report_x[MULTI_FINGER_NUMBER];
+static int report_y[MULTI_FINGER_NUMBER];
+static int touch_hit;
+static int ime_work_area[4];
+static int ime_work_area_x1;
+static int ime_work_area_x2;
+static int ime_work_area_y1;
+static int ime_work_area_y2;
+static int display_width = 320;
+static int display_height = 480;
+
+static ssize_t ime_threshold_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", ime_threshold);
+}
+
+static ssize_t ime_threshold_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t count)
+{
+	char *ptr_data = (char *)buf;
+	unsigned long val;
+
+	val = simple_strtoul(ptr_data, NULL, 10);
+
+	if (val >= 0 && val <= max(display_width, display_height))
+		ime_threshold = val;
+	else
+		ime_threshold = 0;
+	return count;
+}
+
+static ssize_t ime_work_area_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d,%d,%d,%d\n", ime_work_area[0],
+			ime_work_area[1], ime_work_area[2], ime_work_area[3]);
+}
+
+static ssize_t ime_work_area_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t count)
+{
+	char *ptr_data = (char *)buf;
+	char *p;
+	int pt_count = 0;
+	unsigned long val[4];
+
+	while ((p = strsep(&ptr_data, ","))) {
+		if (!*p)
+			break;
+
+		if (pt_count >= 4)
+			break;
+
+		val[pt_count] = simple_strtoul(p, NULL, 10);
+
+		pt_count++;
+	}
+
+	if (pt_count >= 4 && display_width && display_height) {
+		ime_work_area[0] = val[0];
+		ime_work_area[1] = val[1];
+		ime_work_area[2] = val[2];
+		ime_work_area[3] = val[3];
+
+		if (val[0] <= 1)
+			ime_work_area_x1 = 0;
+		else
+			ime_work_area_x1 = val[0];
+
+		if (val[1] >= display_width - 1)
+			ime_work_area_x2 = 319;
+		else
+			ime_work_area_x2 = val[1];
+
+		if (val[2] <= 1)
+			ime_work_area_y1 = 0;
+		else
+			ime_work_area_y1 = val[2];
+
+		if (val[3] >= display_height - 1)
+			ime_work_area_y2 = 479;
+		else
+			ime_work_area_y2 = val[3];
+	}
+
+	return count;
+}
+
+static void clear_queue(void)
+{
+	/* Clear report point coordinate */
+	int i;
+
+	for (i = 0; i < MULTI_FINGER_NUMBER; i++) {
+		report_x[i] = 0;
+		report_y[i] = 0;
+	}
+
+	touch_hit = 0;
+}
+
+static DEVICE_ATTR(ime_threshold, 0666, ime_threshold_show,
+		ime_threshold_store);
+static DEVICE_ATTR(ime_work_area, 0666, ime_work_area_show,
+		ime_work_area_store);
+#endif
 
 static int melfas_i2c_op_mode_switch(struct i2c_client *client, uint16_t mode)
 {
@@ -222,6 +340,7 @@ static int melfas_ts_report(struct melfas_ts_data *ts)
 	int finger2_pressed = 0;
 	static uint16_t position_data[2][2];
 	static uint16_t ref_z, ref_w, ref_pos[2][2];
+	int point_moved = 1; /* for ENABLE_IME_IMPROVEMENT */
 
 	int buf_len = (ts->sensor_revision == MELFAS_DIAMOND_PATTERN)? 11 : 10;
 
@@ -288,6 +407,14 @@ static int melfas_ts_report(struct melfas_ts_data *ts)
 			input_mt_sync(ts->input_dev);
 			input_sync(ts->input_dev);
 #endif
+#ifdef ENABLE_IME_IMPROVEMENT
+			clear_queue();
+#endif
+			if (!ts->key_pressed) {
+				ts->key_pressed = 1;
+				if (!ts->first_pressed)
+				printk(KERN_INFO "K@%d\n", key_x_axis);
+			}
 		}
 		goto done;
 	}
@@ -305,14 +432,72 @@ static int melfas_ts_report(struct melfas_ts_data *ts)
 		input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0);
 		input_sync(ts->input_dev);
 #endif
+#ifdef ENABLE_IME_IMPROVEMENT
+					clear_queue();
+#endif
+		if (ts->key_pressed) {
+			ts->key_pressed = 0;
+			if (!ts->first_pressed) {
+				ts->first_pressed = 1;
+				printk(KERN_INFO "E@%d, %d\n",
+					position_data[0][0], position_data[0][1]);
+			}
+		}
+	} else if ((buffer[0] & 0x03) == 3 || press_width > 10) {
+		mutex_unlock(&ts->melfas_ts_mutex);
+		return 0;
 	} else {
 		/* handle draw screen */
 		if (abs(press_pressure - ref_z) <  PRESSURE_THR
-			&& abs(press_width - ref_w) < WIDTH_THR && press_pressure != 0
+			&& abs(press_width - ref_w) < WIDTH_THR && ts->key_pressed
 			&& ref_pos[0][0] == position_data[0][0] && ref_pos[0][1] == position_data[0][1]
 			&& ref_pos[1][0] == position_data[1][0] && ref_pos[1][1] == position_data[1][1])
 			goto done;
 		else {
+
+#ifdef ENABLE_IME_IMPROVEMENT
+			if (ime_threshold > 0) {
+				int dx = 0;
+				int dy = 0;
+				int moved = 0;
+				int finger = buffer[0] & 0x3;
+
+				point_moved = 0;
+
+				if ((position_data[0][0] >= ime_work_area_x1 && position_data[0][0] <= ime_work_area_x2) &&
+					(position_data[0][1] >= ime_work_area_y1 && position_data[0][1] <= ime_work_area_y2)) {
+
+					dx = abs(position_data[0][0] - report_x[0]);
+					dy = abs(position_data[0][1] - report_y[0]);
+
+					if ((dx > ime_threshold) || (dy > ime_threshold)) {
+						if ((finger == 1) && (report_x[0] != 0) && (report_y[0] != 0))
+							touch_hit = 1;
+
+						moved = 1;
+					}
+
+					if (finger != 1) {
+						moved = 0;
+						report_x[0] = 0;
+						report_y[0] = 0;
+					}
+
+					if (moved) {
+						report_x[0] = position_data[0][0];
+						report_y[0] = position_data[0][1];
+					}
+
+					if ((touch_hit == 1) || (moved == 1))
+						point_moved = 1;
+				} else { /* Not in IME work area */
+					point_moved = 1;
+				}
+			}
+			if (!point_moved)
+				goto done;
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_CONCATENATE_REPORT
 		input_report_abs(ts->input_dev, ABS_MT_AMPLITUDE,
 			press_pressure << 16 | press_width);
@@ -344,6 +529,12 @@ static int melfas_ts_report(struct melfas_ts_data *ts)
 		ts->reported_finger_count = finger_num;
 		input_sync(ts->input_dev);
 #endif
+		if (!ts->key_pressed) {
+			ts->key_pressed = 1;
+			if (!ts->first_pressed)
+				printk(KERN_INFO "S@%d, %d\n",
+					position_data[0][0], position_data[0][1]);
+		}
 		ref_z = press_pressure;
 		ref_w = press_width;
 		for (loop_i = 0; loop_i < 2; loop_i++)
@@ -357,11 +548,11 @@ done:
 #ifdef ENABLE_MELFAS_TOUCH_DEBUGFS
 	if (ts->debug_log_level & 0x2)
 		printk(KERN_INFO "%s: X1: %3d, Y1: %3d, X2: %3d, Y2: %3d\n"
-			"\t\tZ: %3d (%d), key: %3d(%d), width: %2d, priority: %2d\n",
+			"\t\tZ: %3d (%d), key: %3d(%d), width: %2d\n",
 			__func__, position_data[0][0], position_data[0][1],
 			position_data[1][0], position_data[1][1],
 			press_pressure, finger2_pressed, key_x_axis, key_value,
-			press_width, ts->priority);
+			press_width);
 #endif
 	mutex_unlock(&ts->melfas_ts_mutex);
 
@@ -430,6 +621,7 @@ static void melfas_ts_early_suspend(struct early_suspend *h)
 		gpio_set_value(ts->wake_up, 0);
 	}
 	melfas_i2c_op_mode_switch(ts->client, MELFAS_I2C_OP_SLEEP_MODE);
+	gpio_direction_output(ts->tp_en, 0);
 }
 
 static void melfas_ts_late_resume(struct early_suspend *h)
@@ -444,7 +636,7 @@ static void melfas_ts_late_resume(struct early_suspend *h)
 			printk(KERN_ERR "%s: power on failed\n", __func__);
 		}
 	}
-	ts->priority = 0;
+	ts->first_pressed = 0;
 	ts->key_pressed = 0;
 
 	if (ts->wake_up && (ts->sensor_revision == MELFAS_DIAMOND_PATTERN)) {
@@ -462,7 +654,7 @@ static void melfas_ts_late_resume(struct early_suspend *h)
 		ts->reset();
 		melfas_i2c_op_mode_switch(ts->client, MELFAS_I2C_OP_IDLE_MODE);
 	}
-
+	msleep(150);
 	return;
 }
 #endif
@@ -676,6 +868,9 @@ static int melfas_ts_probe(
 	struct melfas_i2c_rmi_platform_data *pdata;
 	uint8_t buffer[2];
 	uint16_t loop_i;
+#ifdef ENABLE_IME_IMPROVEMENT
+	int i;
+#endif
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		printk(KERN_ERR "%s: need I2C_FUNC_I2C\n", __func__);
@@ -699,6 +894,7 @@ static int melfas_ts_probe(
 		ts->intr = pdata->intr;
 		ts->wake_up = pdata->wake_up;
 		ts->reset = pdata->reset;
+		ts->tp_en = pdata->tp_en;
 	}
 	if (ts->power) {
 		ret = ts->power(1);
@@ -817,7 +1013,7 @@ static int melfas_ts_probe(
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION,
 		0, ((1 << 31) | (ts->max_x << 16) | ts->max_y), 0, 0);
 #endif
-	ts->input_dev->name = client->name;
+	ts->input_dev->name = "melfas-tsi-touchscreen";
 	ret = input_register_device(ts->input_dev);
 	if (ret) {
 		printk(KERN_ERR "%s: Unable to register %s input device\n",
@@ -825,7 +1021,7 @@ static int melfas_ts_probe(
 		goto err_input_register_device_failed;
 	}
 
-	if (ts->virtual_key_num)	 {
+	if (ts->virtual_key_num) {
 		ts->input_key_dev = input_allocate_device();
 		set_bit(ts->virt_key_type, ts->input_key_dev->evbit);
 		for (loop_i = 0; loop_i < ts->virtual_key_num; loop_i++)
@@ -839,6 +1035,30 @@ static int melfas_ts_probe(
 			goto err_input_key_register_device_failed;
 		}
 	}
+
+#ifdef ENABLE_IME_IMPROVEMENT
+	ret = device_create_file(&ts->input_dev->dev, &dev_attr_ime_threshold);
+	if (ret) {
+		printk(KERN_ERR "ENABLE_IME_IMPROVEMENT: "
+				"Error to create ime_threshold\n");
+		goto err_input_register_device_failed;
+	}
+	ret = device_create_file(&ts->input_dev->dev, &dev_attr_ime_work_area);
+	if (ret) {
+		printk(KERN_ERR "ENABLE_IME_IMPROVEMENT: "
+				"Error to create ime_work_area\n");
+		device_remove_file(&ts->input_dev->dev,
+				   &dev_attr_ime_threshold);
+		goto err_input_register_device_failed;
+	}
+
+	ime_threshold = 0;
+	for (i = 0; i < MULTI_FINGER_NUMBER; i++) {
+		report_x[i] = 0;
+		report_y[i] = 0;
+	}
+	touch_hit = 0;
+#endif
 
 	if (client->irq) {
 		ret = request_irq(client->irq, melfas_ts_irq_handler,
@@ -861,6 +1081,7 @@ static int melfas_ts_probe(
 		melfas_ts_report(ts);
 	}
 	melfas_i2c_op_mode_switch(ts->client, MELFAS_I2C_OP_IDLE_MODE);
+	msleep(150); /*make sure no other i2c command to bother melfas*/
 	if (!ts->use_irq) {
 		hrtimer_init(&ts->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		ts->timer.function = melfas_ts_timer_func;
@@ -880,6 +1101,7 @@ static int melfas_ts_probe(
 
 	malfas_touch_sysfs_init();
 
+	 set_melfas_reset_pin(ts->tp_en);
 #ifdef ENABLE_MELFAS_TOUCH_DEBUGFS
 	malfas_touch_debugfs_init(ts);
 #endif
