@@ -67,6 +67,10 @@ struct melfas_i2c_rmi_platform_data {
 	int virtual_key_num;
 	int intr;
 	int wake_up;
+<<<<<<< HEAD
+=======
+	int tp_en;
+>>>>>>> 27ca5d4... fix up merge of updates melfas touchscreen source
 };
 
 #endif /* _LINUX_melfas_I2C_tsi_H */
