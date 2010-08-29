@@ -68,9 +68,13 @@ struct melfas_i2c_rmi_platform_data {
 	int intr;
 	int wake_up;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 	int tp_en;
 >>>>>>> 27ca5d4... fix up merge of updates melfas touchscreen source
+=======
+	int tp_en
+>>>>>>> 3178c16... add desirec into the kernel (kernel works and everything, just need to know what controls softkeys on desirec)
 };
 
 #endif /* _LINUX_melfas_I2C_tsi_H */

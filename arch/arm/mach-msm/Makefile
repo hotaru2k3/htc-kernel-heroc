@@ -72,3 +72,7 @@ obj-$(CONFIG_MACH_HEROC) += board-heroc-rfkill.o
 obj-$(CONFIG_MACH_HEROC) += board-heroc-mmc.o board-heroc-wifi.o htc_wifi_nvs.o
 obj-$(CONFIG_ARCH_MSM7X00A) += msm_vibrator.o devices_htc.o
 
+obj-$(CONFIG_MACH_DESIREC) += board-desirec.o board-desirec-panel.o board-desirec-keypad.o
+obj-$(CONFIG_MACH_DESIREC) += board-desirec-rfkill.o
+obj-$(CONFIG_MACH_DESIREC) += board-desirec-mmc.o board-desirec-wifi.o htc_wifi_nvs.o
+

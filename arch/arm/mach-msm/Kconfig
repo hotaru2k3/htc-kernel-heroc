@@ -206,6 +206,13 @@ config MACH_HEROC
 	help
 	  Support for HeroC (PDA phone).
 
+config MACH_DESIREC
+	depends on ARCH_MSM7X00A
+	default n
+	bool "Hero"
+	help
+	  Support for Droid Eris (PDA phone).
+
 config MACH_LIBERTY
 	depends on ARCH_MSM7227
 	default n
