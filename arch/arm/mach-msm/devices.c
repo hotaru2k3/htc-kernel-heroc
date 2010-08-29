@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-msm/devices.c
+ /* linux/arch/arm/mach-msm/devices.c
  *
  * Copyright (C) 2008 Google, Inc.
  *
@@ -35,6 +35,7 @@
 #include <linux/usb/mass_storage_function.h>
 #include <mach/msm_rpcrouter.h>
 #include <mach/msm_hsusb_hw.h>
+#include <mach/gpio.h>
 
 static char *df_serialno = "000000000000";
 
@@ -663,6 +664,22 @@ void msm_set_i2c_mux(bool gpio, int *gpio_clk, int *gpio_dat, int clk_str, int d
 				   GPIO_NO_PULL, dat_str);
 		msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
 	}
+}
+
+static int melfas_reset_pin;
+void set_melfas_reset_pin(int gpio)
+{
+        melfas_reset_pin = gpio;
+}
+
+void reset_melfas(void)
+{
+        if (melfas_reset_pin) {
+                gpio_set_value(melfas_reset_pin, 0);
+                msleep(2);
+                gpio_set_value(melfas_reset_pin, 1);
+                msleep(260);
+        }
 }
 
 struct flash_platform_data msm_nand_data = {
