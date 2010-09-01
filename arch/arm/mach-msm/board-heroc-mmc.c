@@ -254,12 +254,10 @@ int heroc_wifi_power(int on)
 	if (on) {
 		config_gpio_table(wifi_on_gpio_table,
 				  ARRAY_SIZE(wifi_on_gpio_table));
-		//mdelay(50);
-                msleep(50);
+		mdelay(50);
 		rc = vreg_enable(vreg_wifi_osc);
 		vreg_set_level(vreg_wifi_osc, 1800);
-		//mdelay(50);
-                msleep(50);
+		mdelay(50);
 		if (rc)
 			return rc;
 		htc_pwrsink_set(PWRSINK_WIFI, 70);
@@ -270,8 +268,8 @@ int heroc_wifi_power(int on)
 	}
 
 	gpio_set_value(HEROC_GPIO_WIFI_EN, on);
-	//mdelay(100);
-        msleep(100);
+	mdelay(100);
+
 
 	if (!on) {
 		if (!heroc_bt_power_state)
