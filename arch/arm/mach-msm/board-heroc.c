@@ -22,7 +22,7 @@
 #include <linux/leds.h>
 #include <linux/switch.h>
 #include <linux/synaptics_i2c_rmi.h>
-#include <mach/cy8c_i2c.h>
+#include <linux/cy8c_tmg_ts.h>
 #include <linux/akm8973.h>
 #include <mach/tpa6130.h>
 #include <linux/bma150.h>
@@ -353,7 +353,7 @@ static struct i2c_board_info i2c_devices[] = {
 		.irq = HEROC_GPIO_TO_INT(HEROC_GPIO_TP_ATT_N)
 	},
 	{
-		I2C_BOARD_INFO(CY8C_I2C_NAME, 0x13),
+		I2C_BOARD_INFO(CYPRESS_TMG_NAME, 0x13),
 		.platform_data = &heroc_cypress_ts_data,
 		.irq = HEROC_GPIO_TO_INT(HEROC_GPIO_TP_ATT_N)
 	},
