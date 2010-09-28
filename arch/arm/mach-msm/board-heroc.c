@@ -81,7 +81,7 @@ static struct platform_device htc_battery_pdev = {
 static int heroc_ts_power(int on)
 {
 	printk(KERN_INFO "heroc_ts_power:%d\n", on);
-/*
+
 	if (on) {
 		gpio_set_value(HEROC_GPIO_TP_EN, 1);
 		msleep(2);
@@ -92,7 +92,6 @@ static int heroc_ts_power(int on)
 		gpio_set_value(HEROC_GPIO_TP_EN, 0);
 
 	}
-	*/
 	return 0;
 }
 
@@ -576,7 +575,7 @@ static void set_h2w_clk(int n)
 
 static void set_h2w_dat_dir(int n)
 {
-#if 0
+#if (0)
 	if (n == 0) /* input */
 		gpio_direction_input(HEROC_GPIO_H2W_DATA);
 	else
@@ -593,7 +592,7 @@ static void set_h2w_dat_dir(int n)
 
 static void set_h2w_clk_dir(int n)
 {
-#if 0
+#if (0)
 	if (n == 0) /* input */
 		gpio_direction_input(HEROC_GPIO_H2W_CLK);
 	else
