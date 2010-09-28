@@ -126,16 +126,16 @@ static struct clkctl_acpu_speed msm7227_tbl[] = {
 /* 7200a turbo mode, PLL0(mpll):245.76, PLL1(gpll):960, PLL2(bpll0):1056 */
 static struct clkctl_acpu_speed  msm72xx_tbl[] = {
 #if defined(CONFIG_TURBO_MODE)
-	{ 19200, ACPU_PLL_TCXO, 0, 0, 19200, 0, VDD_0, 30720, 0, 0, 4 },
-	{ 122880, ACPU_PLL_0, 4, 1, 61440, 1, VDD_2, 61440, 0, 0, 4 },
+	{ 19200, ACPU_PLL_TCXO, 0, 0, 19200, 0, VDD_0, 30720, 0, 0, 4 },// irrelevant with new freq table
+	{ 122880, ACPU_PLL_0, 4, 1, 61440, 1, VDD_2, 61440, 0, 0, 4 },	// irrelevant with new freq table
 #if 1 /* QCT fixup */
-	{ 160000, ACPU_PLL_1, 1, 5, 53333, 2, VDD_2, 61440, 0, 0, 6 },
+	{ 160000, ACPU_PLL_1, 1, 5, 53333, 2, VDD_2, 61440, 0, 0, 6 },	// irrelevant with new freq table
 #else /* Google */
-	{ 160000, ACPU_PLL_1, 1, 5, 64000, 1, VDD_2, 61440, 0, 0, 6 },
+	{ 160000, ACPU_PLL_1, 1, 5, 64000, 1, VDD_2, 61440, 0, 0, 6 },	// irrelevant with new freq table
 #endif
-	{ 176000, ACPU_PLL_2, 2, 5, 88000, 1, VDD_2, 61440, 0, 0, 5 },
-	{ 245760, ACPU_PLL_0, 4, 0, 81920, 2, VDD_3, 61440, 0, 0, 5 },
-	{ 352000, ACPU_PLL_2, 2, 2, 88000, 3, VDD_4, 128000, 0, 3, 7 },
+	{ 176000, ACPU_PLL_2, 2, 5, 88000, 1, VDD_2, 61440, 0, 0, 5 },  // irrelevant with new freq table
+	{ 245760, ACPU_PLL_0, 4, 0, 81920, 2, VDD_2, 61440, 0, 0, 5 },
+	{ 352000, ACPU_PLL_2, 2, 2, 88000, 3, VDD_4, 128000, 0, 3, 7 }, // irrelevant with new freq table
 #if 1 /* QCT fixup */
 	{ 480000, ACPU_PLL_1, 1, 1, 120000, 3, VDD_5, 120000, 0, 2, -1 },
 #else /* Google */
@@ -183,26 +183,24 @@ static struct cpufreq_frequency_table msm7227_freq_table[] = {
 
 static struct cpufreq_frequency_table msm72xx_freq_table[] = {
 #if defined(CONFIG_TURBO_MODE)
-	{ 0, 122880 },
-	{ 1, 160000 },
-	{ 2, 245760 },
-	{ 3, 352000 },
-	{ 4, 480000 },
-	{ 5, 518400 },
-	{ 6, 537600 },
-        { 7, 556800 },
-        { 8, 576000 },
-        { 9, 595200 },
-        { 10, 614400 },
-        { 11, 633600 },
-        { 12, 652800 },
-        { 13, 672000 },
-        { 14, 691200 },
-        { 15, 710400 },
-        { 16, 729600 },
-        { 17, 748800 },
-        { 18, 768000 },
-	{ 19, CPUFREQ_TABLE_END },
+	{ 0, 245760 },
+	{ 1, 352000 },
+	{ 2, 480000 },
+	{ 3, 518400 },
+	{ 4, 537600 },
+        { 5, 556800 },
+        { 6, 576000 },
+        { 7, 595200 },
+        { 8, 614400 },
+        { 9, 633600 },
+        { 10, 652800 },
+        { 11, 672000 },
+        { 12, 691200 },
+        { 13, 710400 },
+        { 14, 729600 },
+        { 15, 748800 },
+        { 16, 768000 },
+	{ 17, CPUFREQ_TABLE_END },
 #else
 	{ 0, 19200 },
 	{ 1, 122880 },
