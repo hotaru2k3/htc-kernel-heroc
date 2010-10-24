@@ -19,64 +19,116 @@
  */
 #include <linux/platform_device.h>
 #include <linux/wifi_tiwlan.h>
+#include <linux/proc_fs.h>
+
+extern unsigned char *get_wifi_nvs_ram(void);
+static struct proc_dir_entry *tiwlan_calibration;
+
+#define WIFI_NVS_LEN_OFFSET     0x0C
+#define WIFI_NVS_DATA_OFFSET    0x40
+#define WIFI_NVS_MAX_SIZE       0x800UL
+
+static unsigned long tiwlan_get_nvs_size( void )
+{
+    unsigned char *ptr;
+    unsigned long len;
+
+    ptr = get_wifi_nvs_ram();
+    if( ptr == NULL ) {
+        return 0;
+    }
+    /* Size in format LE assumed */
+    memcpy( (void *)&len, (void *)(ptr + WIFI_NVS_LEN_OFFSET), sizeof(len) );
+    len = min( len, (WIFI_NVS_MAX_SIZE-WIFI_NVS_DATA_OFFSET) );
+    return len;
+}
+
+static int tiwlan_calibration_read_proc(char *page, char **start, off_t off,
+                                int count, int *eof, void *data)
+{
+    unsigned char *ptr;
+    unsigned long len;
+
+    ptr = get_wifi_nvs_ram();
+    if( ptr == NULL ) {
+        return 0;
+    }
+    len = tiwlan_get_nvs_size();
+    /* i += sprintf(page+i, "WiFi Calibration Size = %lu %x bytes\n", len); */
+    memcpy( (void *)page, (void *)(ptr + WIFI_NVS_DATA_OFFSET), len );
+    return len;
+}
+
+static int tiwlan_calibration_write_proc(struct file *file, const char *buffer,
+                                 unsigned long count, void *data)
+{
+    return 0;
+}
 
 static int wifi_probe(struct platform_device *pdev)
 {
-	struct wifi_platform_data *wifi_ctrl =
-		(struct wifi_platform_data *)(pdev->dev.platform_data);
+        struct wifi_platform_data *wifi_ctrl =
+                (struct wifi_platform_data *)(pdev->dev.platform_data);
 
-	printk(KERN_DEBUG "wifi probe start\n");
+        printk(KERN_DEBUG "wifi probe start\n");
 
-	if (!wifi_ctrl)
-		return -ENODEV;
+        if (!wifi_ctrl)
+                return -ENODEV;
 
-	if (wifi_ctrl->set_power)
-		wifi_ctrl->set_power(1);	/* Power On */
-	if (wifi_ctrl->set_reset)
-		wifi_ctrl->set_reset(0);	/* Reset clear */
-	if (wifi_ctrl->set_carddetect)
-		wifi_ctrl->set_carddetect(1);	/* CardDetect (0->1) */
+        if (wifi_ctrl->set_power)
+                wifi_ctrl->set_power(1);        /* Power On */
+        if (wifi_ctrl->set_reset)
+                wifi_ctrl->set_reset(0);        /* Reset clear */
+        if (wifi_ctrl->set_carddetect)
+                wifi_ctrl->set_carddetect(1);   /* CardDetect (0->1) */
 
-	printk(KERN_DEBUG "wifi probe done\n");
-	return 0;
+        printk(KERN_DEBUG "wifi probe done\n");
+        return 0;
 }
 
 static int wifi_remove(struct platform_device *pdev)
 {
-	struct wifi_platform_data *wifi_ctrl =
-		(struct wifi_platform_data *)(pdev->dev.platform_data);
+        struct wifi_platform_data *wifi_ctrl =
+                (struct wifi_platform_data *)(pdev->dev.platform_data);
 
-	printk(KERN_DEBUG "wifi remove start\n");
-	if (!wifi_ctrl)
-		return -ENODEV;
+        printk(KERN_DEBUG "wifi remove start\n");
+        if (!wifi_ctrl)
+                return -ENODEV;
 
-	if (wifi_ctrl->set_carddetect)
-		wifi_ctrl->set_carddetect(0);	/* CardDetect (1->0) */
-	if (wifi_ctrl->set_reset)
-		wifi_ctrl->set_reset(1);	/* Reset active */
-	if (wifi_ctrl->set_power)
-		wifi_ctrl->set_power(0);	/* Power Off */
+        if (wifi_ctrl->set_carddetect)
+                wifi_ctrl->set_carddetect(0);   /* CardDetect (1->0) */
+        if (wifi_ctrl->set_reset)
+                wifi_ctrl->set_reset(1);        /* Reset active */
+        if (wifi_ctrl->set_power)
+                wifi_ctrl->set_power(0);        /* Power Off */
 
-	printk(KERN_DEBUG "wifi remove end\n");
-	return 0;
+        printk(KERN_DEBUG "wifi remove end\n");
+        return 0;
 }
 
 static struct platform_driver wifi_device = {
-	.probe		= wifi_probe,
-	.remove		= wifi_remove,
-	.driver		= {
-		.name   = "msm_wifi",
-	},
+        .probe          = wifi_probe,
+        .remove         = wifi_remove,
+        .driver         = {
+                .name   = "msm_wifi",
+        },
 };
 
 static int __init msm_wifi_sdio_init(void)
 {
-	return platform_driver_register(&wifi_device);
+        tiwlan_calibration = create_proc_entry("calibration", 0644, NULL);
+        if (tiwlan_calibration) {
+                tiwlan_calibration->size = tiwlan_get_nvs_size();
+                tiwlan_calibration->read_proc = tiwlan_calibration_read_proc;
+                tiwlan_calibration->write_proc = tiwlan_calibration_write_proc;
+        }
+        return platform_driver_register(&wifi_device);
 }
 
 static void __exit msm_wifi_sdio_exit(void)
 {
-	platform_driver_unregister(&wifi_device);
+        platform_driver_unregister(&wifi_device);
+	remove_proc_entry("calibration", NULL);
 }
 
 module_init(msm_wifi_sdio_init);
