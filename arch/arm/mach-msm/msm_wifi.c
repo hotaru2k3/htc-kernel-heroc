@@ -116,19 +116,20 @@ static struct platform_driver wifi_device = {
 
 static int __init msm_wifi_sdio_init(void)
 {
-        tiwlan_calibration = create_proc_entry("calibration", 0644, NULL);
-        if (tiwlan_calibration) {
-                tiwlan_calibration->size = tiwlan_get_nvs_size();
-                tiwlan_calibration->read_proc = tiwlan_calibration_read_proc;
-                tiwlan_calibration->write_proc = tiwlan_calibration_write_proc;
-        }
-        return platform_driver_register(&wifi_device);
+        msm_wifi_calibration = create_proc_entry("msm_wifi_calibration", 0644, NULL);
+    if (msm_wifi_calibration) {
+            msm_wifi_calibration->size = tiwlan_get_nvs_size();
+            msm_wifi_calibration->read_proc = tiwlan_calibration_read_proc;
+            msm_wifi_calibration->write_proc = tiwlan_calibration_write_proc;
+    }
+    return platform_driver_register(&wifi_device);
 }
 
 static void __exit msm_wifi_sdio_exit(void)
 {
         platform_driver_unregister(&wifi_device);
-	remove_proc_entry("calibration", NULL);
+ 	if(msm_wifi_calibration)      /* After renaming */
+      		remove_proc_entry("msm_wifi_calibration", NULL);
 }
 
 module_init(msm_wifi_sdio_init);
