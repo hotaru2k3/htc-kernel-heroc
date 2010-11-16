@@ -112,8 +112,7 @@ static uint32_t heroc_sdslot_switchvdd(struct device *dev, unsigned int vdd)
 	if (!sdslot_vreg_enabled) {
 		mdelay(5);
 		vreg_enable(vreg_sdslot);
-		//udelay(500);
-                usleep(500);
+		udelay(500);
 		config_gpio_table(sdcard_on_gpio_table,
 				  ARRAY_SIZE(sdcard_on_gpio_table));
 		sdslot_vreg_enabled = 1;
