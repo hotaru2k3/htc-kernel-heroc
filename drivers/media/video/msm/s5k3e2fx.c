@@ -2931,6 +2931,33 @@ static int s5k3e2fx_sensor_config(void __user *argp)
 	return rc;
 }
 
+static int s5k3e2fx_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	int rc;
+	struct msm_camera_sensor_info *sinfo = pdev->dev.platform_data;
+
+	if (!sinfo->need_suspend)
+		return 0;
+	s5k3e2fx_event.waked_up = 0;
+
+
+	pr_info("s5k3e2fx: camera suspend\n");
+	rc = gpio_request(sinfo->sensor_reset, "s5k3e2fx");
+	if (!rc)
+		gpio_direction_output(sinfo->sensor_reset, 0);
+	else {
+		pr_err("s5k3e2fx: request GPIO(sensor_reset) :%d faile\n",
+			sinfo->sensor_reset);
+		goto suspend_fail;
+	}
+	CDBG("s5k3e2fx: gpio_free:%d line:%d\n", sinfo->sensor_reset,
+		__LINE__);
+	gpio_free(sinfo->sensor_reset);
+
+suspend_fail:
+	return rc;
+}
+
 static void s5k3e2fx_sensor_resume_setting(void)
 {
 	s5k3e2fx_i2c_write_b(s5k3e2fx_client->addr,
@@ -3112,30 +3139,7 @@ probe_fail:
 }
 
 
-static int s5k3e2fx_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	int rc;
-	struct msm_camera_sensor_info *sinfo = s5k3e2fx_pdev->dev.platform_data;
 
-	if (!sinfo->need_suspend)
-		return 0;
-
-	CDBG("s5k3e2fx: camera suspend\n");
-	rc = gpio_request(sinfo->sensor_reset, "s5k3e2fx");
-	if (!rc)
-		gpio_direction_output(sinfo->sensor_reset, 0);
-	else {
-		pr_err("s5k3e2fx: request GPIO(sensor_reset) :%d faile\n",
-			sinfo->sensor_reset);
-		goto suspend_fail;
-	}
-	CDBG("s5k3e2fx: gpio_free:%d line:%d\n", sinfo->sensor_reset,
-		__LINE__);
-	gpio_free(sinfo->sensor_reset);
-
-suspend_fail:
-	return rc;
-}
 
 static int __s5k3e2fx_probe(struct platform_device *pdev)
 {
