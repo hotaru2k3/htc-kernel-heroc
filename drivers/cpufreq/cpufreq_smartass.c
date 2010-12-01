@@ -95,7 +95,7 @@ static unsigned int sleep_wakeup_freq;
  * go below this frequency.
  * Set awake_min_freq=0 to disable this behavior.
  */
-#define DEFAULT_AWAKE_MIN_FREQ 480000
+#define DEFAULT_AWAKE_MIN_FREQ 518400 // CDMA radio pegs 480000 for QCT fixup
 static unsigned int awake_min_freq;
 
 /*
