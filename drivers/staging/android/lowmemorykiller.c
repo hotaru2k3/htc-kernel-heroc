@@ -67,7 +67,11 @@ static int lowmem_minfile_size = 6;
 static int ignore_lowmem_deathpending;
 static struct task_struct *lowmem_deathpending;
 
+#ifdef CONFIG_SWAP
+static uint32_t lowmem_check_filepages = 1;
+#else
 static uint32_t lowmem_check_filepages = 0;
+#endif
 
 static uint32_t lowmem_deathpending_retries = 0;
 
