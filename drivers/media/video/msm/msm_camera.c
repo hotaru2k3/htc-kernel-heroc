@@ -34,6 +34,8 @@
 #include <linux/rtc.h>
 #include <mach/msm_flashlight.h>
 
+DEFINE_MUTEX(hlist_mut);
+
 #define MSM_MAX_CAMERA_SENSORS 5
 
 #define ERR_USER_COPY(to) pr_err("%s(%d): copy %s user\n", \
@@ -129,7 +131,9 @@ static void msm_enqueue(struct msm_device_queue *queue,
 		__q->len--;					\
 		qcmd = list_first_entry(&__q->list,		\
 				struct msm_queue_cmd, member);	\
-		list_del_init(&qcmd->member);			\
+		if (qcmd) {					\
+			list_del_init(&qcmd->member);		\
+		}						\
 	}							\
 	spin_unlock_irqrestore(&__q->lock, flags);		\
 	qcmd;							\
@@ -265,6 +269,7 @@ static uint8_t msm_pmem_region_lookup(struct hlist_head *ptype,
 
 	regptr = reg;
 
+	mutex_lock(&hlist_mut);
 	hlist_for_each_entry_safe(region, node, n, ptype, list) {
 		if (region->info.type == pmem_type &&
 			region->info.vfe_can_write) {
@@ -276,6 +281,7 @@ static uint8_t msm_pmem_region_lookup(struct hlist_head *ptype,
 		}
 	}
 
+	mutex_unlock(&hlist_mut);
 	return rc;
 }
 
@@ -444,7 +450,9 @@ static int __msm_get_frame(struct msm_sync *sync,
 	struct msm_vfe_resp *vdata;
 	struct msm_vfe_phy_info *pphy;
 
-	qcmd = msm_dequeue(&sync->frame_q, list_frame);
+	if (&sync->frame_q) {
+		qcmd = msm_dequeue(&sync->frame_q, list_frame);
+	}
 
 	if (!qcmd) {
 		pr_err("%s: no preview frame.\n", __func__);
@@ -473,6 +481,7 @@ static int __msm_get_frame(struct msm_sync *sync,
 	frame->y_off = region->info.y_off;
 	frame->cbcr_off = region->info.cbcr_off;
 	frame->fd = region->info.fd;
+	frame->path = vdata->phy.output_id;
 
 	CDBG("%s: y %x, cbcr %x, qcmd %x, virt_addr %x\n",
 		__func__,
@@ -2422,6 +2431,169 @@ static int msm_tear_down_cdev(struct msm_device *msm, dev_t devno)
 	return 0;
 }
 
+static uint32_t led_ril_status_value;
+static uint32_t led_wimax_status_value;
+static uint32_t led_hotspot_status_value;
+static uint32_t led_low_temp_limit;
+static uint32_t led_low_cap_limit;
+static struct kobject *led_status_obj;
+
+static ssize_t led_ril_status_get(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	ssize_t length;
+	length = sprintf(buf, "%d\n", led_ril_status_value);
+	return length;
+}
+
+static ssize_t led_ril_status_set(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	uint32_t tmp = 0;
+
+	tmp = buf[0] - 0x30; /* only get the first char */
+
+	led_ril_status_value = tmp;
+	pr_info("led_ril_status_value = %d\n", led_ril_status_value);
+	return count;
+}
+
+static ssize_t led_wimax_status_get(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	ssize_t length;
+	length = sprintf(buf, "%d\n", led_wimax_status_value);
+	return length;
+}
+
+static ssize_t led_wimax_status_set(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	uint32_t tmp = 0;
+
+	tmp = buf[0] - 0x30; /* only get the first char */
+
+	led_wimax_status_value = tmp;
+	pr_info("led_wimax_status_value = %d\n", led_wimax_status_value);
+	return count;
+}
+
+static ssize_t led_hotspot_status_get(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	ssize_t length;
+	length = sprintf(buf, "%d\n", led_hotspot_status_value);
+	return length;
+}
+
+static ssize_t led_hotspot_status_set(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	uint32_t tmp = 0;
+
+	tmp = buf[0] - 0x30; /* only get the first char */
+
+	led_hotspot_status_value = tmp;
+	pr_info("led_hotspot_status_value = %d\n", led_hotspot_status_value);
+	return count;
+}
+
+static ssize_t low_temp_limit_get(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	ssize_t length;
+	length = sprintf(buf, "%d\n", led_low_temp_limit);
+	return length;
+}
+
+static ssize_t low_cap_limit_get(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	ssize_t length;
+	length = sprintf(buf, "%d\n", led_low_cap_limit);
+	return length;
+}
+
+static DEVICE_ATTR(led_ril_status, 0644,
+	led_ril_status_get,
+	led_ril_status_set);
+
+static DEVICE_ATTR(led_wimax_status, 0644,
+	led_wimax_status_get,
+	led_ril_status_set);
+
+static DEVICE_ATTR(led_hotspot_status, 0644,
+	led_hotspot_status_get,
+	led_hotspot_status_set);
+
+static DEVICE_ATTR(low_temp_limit, 0444,
+	low_temp_limit_get,
+	NULL);
+
+static DEVICE_ATTR(low_cap_limit, 0444,
+	low_cap_limit_get,
+	NULL);
+
+static int msm_camera_sysfs_init(struct msm_sync* sync)
+{
+	int ret = 0;
+	CDBG("msm_camera:kobject creat and add\n");
+	led_status_obj = kobject_create_and_add("camera_led_sstatus", NULL);
+	if(led_status_obj == NULL) {
+		pr_info("msm_camera: subsystem_register failed\n");
+		ret = -ENOMEM;
+		goto error;
+	}
+
+	ret = sysfs_create_file(led_status_obj,
+		&dev_attr_led_ril_status.attr);
+	if(ret) {
+		pr_info("msm_camera: sysfs_create_file ril failed\n");
+		ret = -EFAULT;
+		goto error;
+	}
+
+	ret = sysfs_create_file(led_status_obj,
+		&dev_attr_led_wimax_status.attr);
+	if(ret) {
+		pr_info("msm_camera: sysfs_create_file wimax failed\n");
+		ret = -EFAULT;
+		goto error;
+	}
+
+	ret = sysfs_create_file(led_status_obj,
+		&dev_attr_led_hotspot_status.attr);
+	if(ret) {
+		pr_info("msm_camera: sysfs_create_file hotspot failed\n");
+		ret = -EFAULT;
+		goto error;
+	}
+
+	ret = sysfs_create_file(led_status_obj,
+		&dev_attr_low_temp_limit.attr);
+	if(ret) {
+		pr_info("msm_camera: sysfs_create_file low_temp_limit failed\n");
+		ret = -EFAULT;
+		goto error;
+	}
+
+	ret = sysfs_create_file(led_status_obj,
+		&dev_attr_low_cap_limit.attr);
+	if(ret) {
+		pr_info("msm_camera: sysfs_create_file low_cap_limit failed\n");
+		ret = -EFAULT;
+		goto error;
+	}
+
+	led_low_temp_limit = sync->sdata->flash_cfg->low_temp_limit;
+	led_low_cap_limit = sync->sdata->flash_cfg->low_cap_limit;
+
+	return ret;
+error:
+	kobject_del(led_status_obj);
+	return ret;
+}
+
 #ifdef CONFIG_MSM_CAMERA_V4L2
 int msm_v4l2_register(struct msm_v4l2_driver *drv)
 {
@@ -2454,7 +2626,7 @@ EXPORT_SYMBOL(msm_v4l2_unregister);
 static int msm_sync_init(struct msm_sync *sync,
 		struct platform_device *pdev,
 		int (*sensor_probe)(struct msm_camera_sensor_info *,
-				struct msm_sensor_ctrl *))
+				struct msm_sensor_ctrl *), int camera_node)
 {
 	int rc = 0;
 	struct msm_sensor_ctrl sctrl;
@@ -2470,6 +2642,8 @@ static int msm_sync_init(struct msm_sync *sync,
 	rc = msm_camio_probe_on(pdev);
 	if (rc < 0)
 		return rc;
+	sctrl.node = camera_node;
+	pr_info("sctrl.node %d\n", sctrl.node);
 	rc = sensor_probe(sync->sdata, &sctrl);
 	if (rc >= 0) {
 		sync->pdev = pdev;
@@ -2551,7 +2725,7 @@ int msm_camera_drv_start(struct platform_device *dev,
 	struct msm_device *pmsm = NULL;
 	struct msm_sync *sync;
 	int rc = -ENODEV;
-	static int camera_node;
+	static int camera_node = 0;
 
 	if (camera_node >= MSM_MAX_CAMERA_SENSORS) {
 		pr_err("%s: too many camera sensors\n", __func__);
@@ -2584,7 +2758,7 @@ int msm_camera_drv_start(struct platform_device *dev,
 		return -ENOMEM;
 	sync = (struct msm_sync *)(pmsm + 3);
 
-	rc = msm_sync_init(sync, dev, sensor_probe);
+	rc = msm_sync_init(sync, dev, sensor_probe, camera_node);
 	if (rc < 0) {
 		kfree(pmsm);
 		return rc;
