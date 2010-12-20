@@ -131,9 +131,9 @@ static void msm_enqueue(struct msm_device_queue *queue,
 		__q->len--;					\
 		qcmd = list_first_entry(&__q->list,		\
 				struct msm_queue_cmd, member);	\
-		if (qcmd) {					\
-			list_del_init(&qcmd->member);		\
-		}						\
+                if (qcmd) {                                     \
+                        list_del_init(&qcmd->member);           \
+                }                                               \
 	}							\
 	spin_unlock_irqrestore(&__q->lock, flags);		\
 	qcmd;							\
@@ -268,7 +268,6 @@ static uint8_t msm_pmem_region_lookup(struct hlist_head *ptype,
 	uint8_t rc = 0;
 
 	regptr = reg;
-
 	mutex_lock(&hlist_mut);
 	hlist_for_each_entry_safe(region, node, n, ptype, list) {
 		if (region->info.type == pmem_type &&
@@ -280,7 +279,6 @@ static uint8_t msm_pmem_region_lookup(struct hlist_head *ptype,
 				regptr++;
 		}
 	}
-
 	mutex_unlock(&hlist_mut);
 	return rc;
 }
@@ -482,7 +480,6 @@ static int __msm_get_frame(struct msm_sync *sync,
 	frame->cbcr_off = region->info.cbcr_off;
 	frame->fd = region->info.fd;
 	frame->path = vdata->phy.output_id;
-
 	CDBG("%s: y %x, cbcr %x, qcmd %x, virt_addr %x\n",
 		__func__,
 		pphy->y_phy, pphy->cbcr_phy, (int) qcmd, (int) frame->buffer);
@@ -974,6 +971,7 @@ static int msm_get_stats(struct msm_sync *sync, void __user *arg)
 		se.ctrl_cmd.length = ctrl->length;
 		se.ctrl_cmd.resp_fd = ctrl->resp_fd;
 		break;
+
 
 #ifdef CONFIG_MSM_CAMERA_V4L2
 	case MSM_CAM_Q_V4L2_REQ:
