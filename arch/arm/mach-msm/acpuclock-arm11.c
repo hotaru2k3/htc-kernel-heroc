@@ -336,7 +336,7 @@ static void acpuclk_set_div(const struct clkctl_acpu_speed *hunt_s) {
 
 	a11_div=hunt_s->a11clk_src_div;
 
-       if (hunt_s->a11clk_khz > 518400 && hunt_s->pll2_lval > 0) {
+       if (hunt_s->a11clk_khz >= 518400 && hunt_s->pll2_lval > 0) {
 
                a11_div = 0;
                 writel(hunt_s->a11clk_khz/19200, MSM_CLK_CTL_BASE+0x33c);
