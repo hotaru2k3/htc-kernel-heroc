@@ -24,7 +24,7 @@
 #include <linux/platform_device.h>
 #include <linux/synaptics_i2c_rmi.h>
 
-/*#define ENABLE_IME_IMPROVEMENT*/
+#define ENABLE_IME_IMPROVEMENT
 
 static struct workqueue_struct *synaptics_wq;
 
@@ -614,12 +614,13 @@ static void synaptics_ts_work_func(struct work_struct *work)
 				 */
 				 if (ts->grip_suppression[0] == 2 || z == 0) {
 					input_report_abs(ts->input_dev, ABS_MT_AMPLITUDE, z << 16 | w);
-					input_report_abs(ts->input_dev, ABS_MT_POSITION,
-						(!(finger2_pressed && ts->grip_suppression[1] == 2)) << 31 | pos[0][0] << 16 | pos[0][1]);
+					input_report_abs(ts->input_dev, ABS_MT_POSITION, (!finger2_pressed) << 31 | pos[0][0] << 16 | pos[0][1]);
 				}
-				if (finger2_pressed && ts->grip_suppression[1] == 2) {
+				if (finger2_pressed) {
+					if (ts->grip_suppression[1] == 2) {
 						input_report_abs(ts->input_dev, ABS_MT_AMPLITUDE, z << 16 | w);
 						input_report_abs(ts->input_dev, ABS_MT_POSITION, 1 << 31 | pos[1][0] << 16 | pos[1][1]);
+					}
 				}
 #else
 				if (ts->grip_suppression[0] == 2 || z == 0) {
