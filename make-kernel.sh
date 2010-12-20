@@ -17,7 +17,7 @@ else
         else
                 if [[ "${1}" == "K" ]]
                 then
-                        make ARCH=arm CROSS_COMPILE=$CCOMPILER ${2}
+                        make ARCH=arm CROSS_COMPILE=$CCOMPILER ${2} -j`grep 'processor' /proc/cpuinfo | wc -l`
                 else
                         echo "Usage: "
                         echo " ANDROID=/path/to/android/ ${me} <action>"
