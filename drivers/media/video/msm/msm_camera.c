@@ -32,7 +32,6 @@
 #include <mach/camera.h>
 #include <asm/cacheflush.h>
 #include <linux/rtc.h>
-DEFINE_MUTEX(hlist_mut);
 
 DEFINE_MUTEX(hlist_mut);
 
