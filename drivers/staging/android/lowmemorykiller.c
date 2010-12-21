@@ -52,6 +52,22 @@ static size_t lowmem_minfree[6] = {
 };
 static int lowmem_minfree_size = 4;
 
+static size_t lowmem_minfile[6] = {
+	1536,
+	2048,
+	4096,
+	5120,
+	5632,
+	6144
+};
+static int lowmem_minfile_size = 6;
+
+#ifdef CONFIG_SWAP
+static uint32_t lowmem_check_filepages = 1;
+#else
+static uint32_t lowmem_check_filepages = 0;
+#endif
+
 static struct task_struct *lowmem_deathpending;
 static unsigned long lowmem_deathpending_timeout;
 
@@ -92,6 +108,8 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free = global_page_state(NR_FREE_PAGES);
 	int other_file = global_page_state(NR_FILE_PAGES);
+	int lru_file = global_page_state(NR_ACTIVE_FILE) +
+			global_page_state(NR_INACTIVE_FILE);
 
 	/*
 	 * If we already have a death outstanding, then
@@ -110,7 +128,9 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 		array_size = lowmem_minfree_size;
 	for (i = 0; i < array_size; i++) {
 		if (other_free < lowmem_minfree[i] &&
-		    other_file < lowmem_minfree[i]) {
+		    (other_file < lowmem_minfree[i] ||
+		     (lowmem_check_filepages &&
+		      (lru_file < lowmem_minfile[i])))) {
 			min_adj = lowmem_adj[i];
 			break;
 		}
@@ -204,6 +224,11 @@ module_param_array_named(adj, lowmem_adj, int, &lowmem_adj_size,
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
+
+module_param_named(check_filepages, lowmem_check_filepages, uint,
+			S_IRUGO | S_IWUSR);
+module_param_array_named(minfile, lowmem_minfile, uint, &lowmem_minfile_size,
+			S_IRUGO | S_IWUSR);
 
 module_init(lowmem_init);
 module_exit(lowmem_exit);
