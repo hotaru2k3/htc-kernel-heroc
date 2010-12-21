@@ -126,36 +126,36 @@ static struct clkctl_acpu_speed msm7227_tbl[] = {
 /* 7200a turbo mode, PLL0(mpll):245.76, PLL1(gpll):960, PLL2(bpll0):1056 */
 static struct clkctl_acpu_speed  msm72xx_tbl[] = {
 #if defined(CONFIG_TURBO_MODE)
-	{ 19200, ACPU_PLL_TCXO, 0, 0, 19200, 0, VDD_0, 30720, 0, 0, 4 },// irrelevant with new freq table
+	{ 19200, ACPU_PLL_TCXO, 0, 0, 19200, 0, VDD_0, 30720, 0, 0, 3 },// irrelevant with new freq table
 	{ 122880, ACPU_PLL_0, 4, 1, 61440, 1, VDD_3, 61440, 0, 0, 4 },	// irrelevant with new freq table
 #if 1 /* QCT fixup */
 	{ 160000, ACPU_PLL_1, 1, 5, 53333, 2, VDD_3, 61440, 0, 0, 6 },	// irrelevant with new freq table
 #else /* Google */
 	{ 160000, ACPU_PLL_1, 1, 5, 64000, 1, VDD_3, 61440, 0, 0, 6 },	// irrelevant with new freq table
 #endif
-	{ 176000, ACPU_PLL_2, 2, 5, 88000, 1, VDD_3, 61440, 0, 0, 5 },
-	{ 245760, ACPU_PLL_0, 4, 0, 81920, 2, VDD_4, 61440, 0, 0, 5 },
+	{ 176000, ACPU_PLL_2, 2, 5, 88000, 1, VDD_3, 61440, 0, 0, 6 },
+	{ 245760, ACPU_PLL_0, 4, 0, 81920, 2, VDD_4, 61440, 0, 0, 8 },
 	{ 264000, ACPU_PLL_2, 2, 3, 88000, 2, VDD_4, 128000, 0, 0, 8 },
-	{ 352000, ACPU_PLL_2, 2, 2, 88000, 3, VDD_5, 128000, 0, 3, 7 },
+	{ 352000, ACPU_PLL_2, 2, 2, 88000, 3, VDD_5, 128000, 0, 3, 10 },
 #if 1 /* QCT fixup */
-	{ 480000, ACPU_PLL_1, 1, 1, 120000, 3, VDD_6, 120000, 0, 2, -1 },
+	{ 480000, ACPU_PLL_1, 1, 1, 120000, 3, VDD_6, 120000, 0, 4, 15 },
 #else /* Google */
-	{ 480000, ACPU_PLL_1, 1, 1, 128000, 2, VDD_6, 160000, 0, 2, -1 },
+	{ 480000, ACPU_PLL_1, 1, 1, 128000, 2, VDD_6, 160000, 0, 4, 15 },
 #endif
-	{ 518400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x1a },
-	{ 537600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x1b },
-	{ 576000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x1d },
-	{ 614400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x20 },
-	{ 652800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x22 },
-	{ 691200, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x24 },
-	{ 710400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x25 },
-	{ 729600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x26 },
-	{ 748800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x27 },
-	{ 768000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x28 },
-	{ 787200, ACPU_PLL_2, 2, 1, 132000, 3, VDD_7, 160000, 0, 5, -1, 0x29 },	// May spit back msm_sleep() errors.
-	{ 806400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_7, 160000, 0, 5, -1, 0x2a },	// Seems to stem from pm.c problem
-	{ 825600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_7, 160000, 0, 5, -1, 0x2b },	// with acpuclk_set_rate and
-	{ 844800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_7, 160000, 0, 5, -1, 0x2c }, // pm_saved_acpu_clk_rate.
+	{ 518400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 6, -1, 0x1a },
+	{ 537600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 6, -1, 0x1b },
+	{ 576000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 6, -1, 0x1d },
+	{ 614400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x20 },
+	{ 652800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x22 },
+	{ 691200, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x24 },
+	{ 710400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x25 },
+	{ 729600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x26 },
+	{ 748800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x27 },
+	{ 768000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x28 },
+	{ 787200, ACPU_PLL_2, 2, 1, 132000, 3, VDD_7, 160000, 0, 9, -1, 0x29 },	// May spit back msm_sleep() errors.
+	{ 806400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_7, 160000, 0, 10, -1, 0x2a },	// Seems to stem from pm.c problem
+	{ 825600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_7, 160000, 0, 10, -1, 0x2b },	// with acpuclk_set_rate and
+	{ 844800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_7, 160000, 0, 11, -1, 0x2c }, // pm_saved_acpu_clk_rate.
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 #else
 	{ 19200, ACPU_PLL_TCXO, 0, 0, 19200, 0, VDD_0, 30720, 0, 0, 4 },
